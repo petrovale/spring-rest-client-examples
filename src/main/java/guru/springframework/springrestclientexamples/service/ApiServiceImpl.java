@@ -4,9 +4,13 @@ import guru.springframework.api.domain.User;
 import guru.springframework.api.domain.UserData;
 import java.util.List;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
+import org.springframework.web.reactive.function.client.WebClient;
 import org.springframework.web.util.UriComponentsBuilder;
+import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
 
 @Service
 public class ApiServiceImpl implements ApiService {
@@ -29,5 +33,17 @@ public class ApiServiceImpl implements ApiService {
 
     UserData userData = restTemplate.getForObject(uriComponentsBuilder.toUriString(), UserData.class);
     return userData.getData();
+  }
+
+  @Override
+  public Flux<User> getUsers(Mono<Integer> limit) {
+    return WebClient
+        .create(apiUrl)
+        .get()
+        .uri(uriBuilder -> uriBuilder.queryParam("limit", limit.block()).build())
+        .accept(MediaType.APPLICATION_JSON)
+        .exchange()
+        .flatMap(resp -> resp.bodyToMono(UserData.class))
+        .flatMapIterable(UserData::getData);
   }
 }
